@@ -1,0 +1,31 @@
+FROM node:22.13.1  AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+COPY . .
+
+RUN node ace build
+
+FROM node:22.13.1  AS production
+
+RUN groupadd -r appuser && useradd -r -g appuser -s /bin/false appuser
+
+WORKDIR /app
+
+COPY --from=build /app/build ./build
+
+WORKDIR /app/build
+
+RUN npm ci --omit=dev
+
+RUN chown -R appuser:appuser /app
+
+USER appuser
+
+EXPOSE 3000
+
+CMD ["node", "bin/server.js"]
